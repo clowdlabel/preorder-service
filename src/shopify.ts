@@ -113,7 +113,7 @@ query FetchOrders($queryFilter: String!, $cursor: String) {
               variant {
                 id
                 title
-                sku
+                selectedOptions { name value }
                 product {
                   id
                   title
@@ -254,6 +254,17 @@ export async function fetchPreOrderLineItems(
   return { items: allItems, ordersProcessed };
 }
 
+function getOption(
+  options: Array<{ name: string; value: string }>,
+  ...names: string[]
+): string {
+  for (const name of names) {
+    const opt = options.find((o) => o.name.toLowerCase() === name.toLowerCase());
+    if (opt) return opt.value;
+  }
+  return "";
+}
+
 export function aggregateByVariant(
   items: ShopifyLineItem[]
 ): AggregatedVariant[] {
@@ -268,12 +279,13 @@ export function aggregateByVariant(
     if (existing) {
       existing.quantity += item.quantity;
     } else {
+      const opts = item.variant.selectedOptions;
       map.set(key, {
         productId: item.variant.product.id,
         productTitle: item.variant.product.title,
         variantId: item.variant.id,
-        variantTitle: item.variant.title,
-        sku: item.variant.sku,
+        color: getOption(opts, "Color", "Colour"),
+        size: getOption(opts, "Size"),
         quantity: item.quantity,
       });
     }
@@ -281,6 +293,7 @@ export function aggregateByVariant(
 
   return Array.from(map.values()).sort((a, b) =>
     a.productTitle.localeCompare(b.productTitle) ||
-    a.variantTitle.localeCompare(b.variantTitle)
+    a.color.localeCompare(b.color) ||
+    a.size.localeCompare(b.size)
   );
 }

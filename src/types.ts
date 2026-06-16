@@ -3,7 +3,7 @@ export interface ShopifyLineItem {
   variant: {
     id: string;
     title: string;
-    sku: string;
+    selectedOptions: Array<{ name: string; value: string }>;
     product: {
       id: string;
       title: string;
@@ -35,8 +35,8 @@ export interface AggregatedVariant {
   productId: string;
   productTitle: string;
   variantId: string;
-  variantTitle: string;
-  sku: string;
+  color: string;
+  size: string;
   quantity: number;
 }
 

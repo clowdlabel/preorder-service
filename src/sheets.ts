@@ -90,16 +90,16 @@ async function writeToTab(
   await withRetry(`clear:${sheetName}`, () =>
     sheets.spreadsheets.values.clear({
       spreadsheetId,
-      range: `'${sheetName}'!A:D`,
+      range: `'${sheetName}'!A:E`,
     })
   );
 
   const rows: string[][] = [
-    ["Product", "Variant", "SKU", "Quantity"],
+    ["Product", "Color", "Size", "Quantity"],
     ...variants.map((v) => [
       v.productTitle,
-      v.variantTitle,
-      v.sku,
+      v.color,
+      v.size,
       String(v.quantity),
     ]),
   ];
