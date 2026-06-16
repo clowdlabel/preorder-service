@@ -1,0 +1,33 @@
+name: Backfill Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      since_date:
+        description: "Start date (YYYY-MM-DD)"
+        required: true
+        default: "2026-05-01"
+      tab_name:
+        description: "Sheet tab name"
+        required: true
+        default: "Soft Launch"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: npm ci
+      - run: npm run build
+      - run: node dist/index.js --backfill "${{ github.event.inputs.since_date }}" "${{ github.event.inputs.tab_name }}"
+        env:
+          SHOPIFY_STORE_DOMAIN: ${{ secrets.SHOPIFY_STORE_DOMAIN }}
+          SHOPIFY_CLIENT_ID: ${{ secrets.SHOPIFY_CLIENT_ID }}
+          SHOPIFY_CLIENT_SECRET: ${{ secrets.SHOPIFY_CLIENT_SECRET }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}

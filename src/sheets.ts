@@ -78,26 +78,22 @@ function getWeeklySheetName(date: Date): string {
   return `Week of ${month}-${dayOfMonth}-${year}`;
 }
 
-export async function writeWeeklyReport(
-  serviceAccountJson: string,
+async function writeToTab(
+  sheets: ReturnType<typeof google.sheets>,
   spreadsheetId: string,
-  variants: AggregatedVariant[],
-  runDate: Date
+  sheetName: string,
+  variants: AggregatedVariant[]
 ): Promise<void> {
-  const sheets = getSheetsClient(serviceAccountJson);
-  const sheetName = getWeeklySheetName(runDate);
-
   await ensureSheetExists(sheets, spreadsheetId, sheetName);
 
-  // Clear existing data (idempotent — safe to re-run same week)
-  await withRetry("clearWeeklyReport", () =>
+  // Clear existing data (idempotent — safe to re-run)
+  await withRetry(`clear:${sheetName}`, () =>
     sheets.spreadsheets.values.clear({
       spreadsheetId,
       range: `'${sheetName}'!A:D`,
     })
   );
 
-  // Write header + data
   const rows: string[][] = [
     ["Product", "Variant", "SKU", "Quantity"],
     ...variants.map((v) => [
@@ -108,7 +104,7 @@ export async function writeWeeklyReport(
     ]),
   ];
 
-  await withRetry("writeWeeklyReport", () =>
+  await withRetry(`write:${sheetName}`, () =>
     sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `'${sheetName}'!A1`,
@@ -117,7 +113,25 @@ export async function writeWeeklyReport(
     })
   );
 
-  console.log(
-    `[sheets] Wrote ${variants.length} rows to "${sheetName}"`
-  );
+  console.log(`[sheets] Wrote ${variants.length} rows to "${sheetName}"`);
+}
+
+export async function writeWeeklyReport(
+  serviceAccountJson: string,
+  spreadsheetId: string,
+  variants: AggregatedVariant[],
+  runDate: Date
+): Promise<void> {
+  const sheets = getSheetsClient(serviceAccountJson);
+  await writeToTab(sheets, spreadsheetId, getWeeklySheetName(runDate), variants);
+}
+
+export async function writeNamedReport(
+  serviceAccountJson: string,
+  spreadsheetId: string,
+  variants: AggregatedVariant[],
+  tabName: string
+): Promise<void> {
+  const sheets = getSheetsClient(serviceAccountJson);
+  await writeToTab(sheets, spreadsheetId, tabName, variants);
 }
