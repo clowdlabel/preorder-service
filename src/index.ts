@@ -1,6 +1,6 @@
 import { loadConfig } from "./config.js";
 import { getLastRunAt, saveLastRunAt } from "./storage.js";
-import { fetchPreOrderLineItems, aggregateByVariant } from "./shopify.js";
+import { getAccessToken, fetchPreOrderLineItems, aggregateByVariant } from "./shopify.js";
 import { writeCurrentTotals, appendHistorySnapshot } from "./sheets.js";
 import type { RunMetrics } from "./types.js";
 
@@ -24,17 +24,24 @@ async function main(): Promise<void> {
 
   console.log(`[main] Fetching orders since: ${sinceTimestamp}`);
 
-  // 1. Fetch pre-order line items from Shopify
+  // 1. Get access token via client credentials grant
+  const accessToken = await getAccessToken(
+    config.shopifyStoreDomain,
+    config.shopifyClientId,
+    config.shopifyClientSecret
+  );
+
+  // 2. Fetch pre-order line items from Shopify
   const { items, ordersProcessed } = await fetchPreOrderLineItems(
     config.shopifyStoreDomain,
-    config.shopifyAccessToken,
+    accessToken,
     sinceTimestamp
   );
 
-  // 2. Aggregate by variant
+  // 3. Aggregate by variant
   const aggregated = aggregateByVariant(items);
 
-  // 3. Write to Google Sheets
+  // 4. Write to Google Sheets
   await writeCurrentTotals(
     config.googleServiceAccountJson,
     config.googleSheetId,
@@ -48,11 +55,11 @@ async function main(): Promise<void> {
     runDate
   );
 
-  // 4. Persist last run timestamp
+  // 5. Persist last run timestamp
   const executionEnd = new Date().toISOString();
   saveLastRunAt(config, executionEnd);
 
-  // 5. Print metrics
+  // 6. Print metrics
   const metrics: RunMetrics = {
     ordersProcessed,
     matchingLineItems: items.length,

@@ -12,6 +12,42 @@ async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+let cachedAccessToken: string | null = null;
+
+export async function getAccessToken(
+  storeDomain: string,
+  clientId: string,
+  clientSecret: string
+): Promise<string> {
+  if (cachedAccessToken) return cachedAccessToken;
+
+  console.log("[shopify] Exchanging client credentials for access token...");
+
+  const url = `https://${storeDomain}/admin/oauth/access_token`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      grant_type: "client_credentials",
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(
+      `Shopify token exchange failed (${response.status}): ${body}`
+    );
+  }
+
+  const data = (await response.json()) as { access_token: string };
+  cachedAccessToken = data.access_token;
+  console.log("[shopify] Access token obtained successfully");
+  return cachedAccessToken;
+}
+
 async function shopifyGraphQL(
   storeDomain: string,
   accessToken: string,

@@ -1,6 +1,7 @@
 export interface Config {
   shopifyStoreDomain: string;
-  shopifyAccessToken: string;
+  shopifyClientId: string;
+  shopifyClientSecret: string;
   googleSheetId: string;
   googleServiceAccountJson: string;
   lastRunStorage: "file" | "env";
@@ -18,7 +19,8 @@ export function loadConfig(): Config {
 
   return {
     shopifyStoreDomain: required("SHOPIFY_STORE_DOMAIN"),
-    shopifyAccessToken: required("SHOPIFY_ADMIN_ACCESS_TOKEN"),
+    shopifyClientId: required("SHOPIFY_CLIENT_ID"),
+    shopifyClientSecret: required("SHOPIFY_CLIENT_SECRET"),
     googleSheetId: required("GOOGLE_SHEET_ID"),
     googleServiceAccountJson: required("GOOGLE_SERVICE_ACCOUNT_JSON"),
     lastRunStorage: (process.env.LAST_RUN_STORAGE ?? "file") as "file" | "env",
