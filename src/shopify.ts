@@ -159,11 +159,11 @@ query FetchLineItems($orderId: ID!, $cursor: String) {
 }
 `;
 
+const PRE_ORDER_PATTERN = /pre[- ]?order/i;
+
 function isPreOrderItem(item: ShopifyLineItem): boolean {
   if (!item.variant?.product) return false;
-  return item.variant.product.tags.some(
-    (tag) => tag.toLowerCase() === "pre-order"
-  );
+  return PRE_ORDER_PATTERN.test(item.variant.product.title);
 }
 
 async function fetchAllLineItems(

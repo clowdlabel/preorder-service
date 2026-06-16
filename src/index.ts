@@ -1,7 +1,7 @@
 import { loadConfig } from "./config.js";
 import { getLastRunAt, saveLastRunAt } from "./storage.js";
 import { getAccessToken, fetchPreOrderLineItems, aggregateByVariant } from "./shopify.js";
-import { writeCurrentTotals, appendHistorySnapshot } from "./sheets.js";
+import { writeWeeklyReport } from "./sheets.js";
 import type { RunMetrics } from "./types.js";
 
 async function main(): Promise<void> {
@@ -41,18 +41,12 @@ async function main(): Promise<void> {
   // 3. Aggregate by variant
   const aggregated = aggregateByVariant(items);
 
-  // 4. Write to Google Sheets
-  await writeCurrentTotals(
-    config.googleServiceAccountJson,
-    config.googleSheetId,
-    aggregated
-  );
-
-  await appendHistorySnapshot(
+  // 4. Write to Google Sheets (new tab per week)
+  await writeWeeklyReport(
     config.googleServiceAccountJson,
     config.googleSheetId,
     aggregated,
-    runDate
+    new Date()
   );
 
   // 5. Persist last run timestamp

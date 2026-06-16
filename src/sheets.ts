@@ -67,18 +67,30 @@ async function ensureSheetExists(
   }
 }
 
-export async function writeCurrentTotals(
+function getWeeklySheetName(date: Date): string {
+  // Find Monday of the current week
+  const day = date.getDay();
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - ((day + 6) % 7));
+  const month = String(monday.getMonth() + 1).padStart(2, "0");
+  const dayOfMonth = String(monday.getDate()).padStart(2, "0");
+  const year = monday.getFullYear();
+  return `Week of ${month}-${dayOfMonth}-${year}`;
+}
+
+export async function writeWeeklyReport(
   serviceAccountJson: string,
   spreadsheetId: string,
-  variants: AggregatedVariant[]
+  variants: AggregatedVariant[],
+  runDate: Date
 ): Promise<void> {
   const sheets = getSheetsClient(serviceAccountJson);
-  const sheetName = "Current Preorders";
+  const sheetName = getWeeklySheetName(runDate);
 
   await ensureSheetExists(sheets, spreadsheetId, sheetName);
 
-  // Clear existing data
-  await withRetry("clearCurrentTotals", () =>
+  // Clear existing data (idempotent — safe to re-run same week)
+  await withRetry("clearWeeklyReport", () =>
     sheets.spreadsheets.values.clear({
       spreadsheetId,
       range: `'${sheetName}'!A:D`,
@@ -96,7 +108,7 @@ export async function writeCurrentTotals(
     ]),
   ];
 
-  await withRetry("writeCurrentTotals", () =>
+  await withRetry("writeWeeklyReport", () =>
     sheets.spreadsheets.values.update({
       spreadsheetId,
       range: `'${sheetName}'!A1`,
@@ -107,63 +119,5 @@ export async function writeCurrentTotals(
 
   console.log(
     `[sheets] Wrote ${variants.length} rows to "${sheetName}"`
-  );
-}
-
-export async function appendHistorySnapshot(
-  serviceAccountJson: string,
-  spreadsheetId: string,
-  variants: AggregatedVariant[],
-  runDate: string
-): Promise<void> {
-  const sheets = getSheetsClient(serviceAccountJson);
-  const sheetName = "History";
-
-  await ensureSheetExists(sheets, spreadsheetId, sheetName);
-
-  // Check if header row exists
-  const existing = await withRetry("readHistoryHeader", () =>
-    sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range: `'${sheetName}'!A1:E1`,
-    })
-  );
-
-  if (!existing.data.values?.length) {
-    await withRetry("writeHistoryHeader", () =>
-      sheets.spreadsheets.values.update({
-        spreadsheetId,
-        range: `'${sheetName}'!A1`,
-        valueInputOption: "RAW",
-        requestBody: {
-          values: [["Run Date", "Product", "Variant", "SKU", "Quantity"]],
-        },
-      })
-    );
-  }
-
-  // Append snapshot rows
-  const rows = variants.map((v) => [
-    runDate,
-    v.productTitle,
-    v.variantTitle,
-    v.sku,
-    String(v.quantity),
-  ]);
-
-  if (rows.length > 0) {
-    await withRetry("appendHistory", () =>
-      sheets.spreadsheets.values.append({
-        spreadsheetId,
-        range: `'${sheetName}'!A:E`,
-        valueInputOption: "RAW",
-        insertDataOption: "INSERT_ROWS",
-        requestBody: { values: rows },
-      })
-    );
-  }
-
-  console.log(
-    `[sheets] Appended ${rows.length} rows to "${sheetName}"`
   );
 }
